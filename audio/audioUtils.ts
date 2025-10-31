@@ -4,6 +4,20 @@ import { BassSound, KickSound, SnareSound, HiHatSound, ClapSound, TomSound } fro
 // This constant defines a very small positive number to use as a target instead, preventing errors.
 const MIN_EXP_TARGET = 0.0001;
 
+// Helper function for creating distortion curves for WaveShaperNode
+const makeDistortionCurve = (amount: number) => {
+    const k = typeof amount === 'number' ? amount : 50;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+        const x = i * 2 / n_samples - 1;
+        curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+};
+
+
 export const midiToFreq = (midi: number): number => {
   return Math.pow(2, (midi - 69) / 12) * 440;
 };
@@ -15,133 +29,195 @@ export const createBassNote = (
   bassSound: BassSound
 ): AudioScheduledSourceNode[] => {
   const freq = midiToFreq(midiNote);
-  const attackTime = 0.01;
   let noteLength = 0.4;
+  const nodes: AudioScheduledSourceNode[] = [];
 
-  const playNode = (node: AudioNode, gainValue: number, length: number) => {
+  const playNode = (node: AudioNode, gainValue: number, length: number, destination: AudioNode = ctx.destination) => {
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0, time);
-      gain.gain.linearRampToValueAtTime(gainValue, time + attackTime);
+      gain.gain.linearRampToValueAtTime(gainValue, time + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.01, time + length);
-      node.connect(gain).connect(ctx.destination);
+      node.connect(gain).connect(destination);
   }
 
   switch (bassSound) {
-    case 'P-Bass': { // Thumpy, fundamental
+    case 'P-Bass': { // Thumpy, fundamental, quick decay
       const osc = ctx.createOscillator();
       osc.type = 'square';
       osc.frequency.setValueAtTime(freq, time);
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(350, time);
+      filter.frequency.setValueAtTime(600, time);
+      filter.frequency.exponentialRampToValueAtTime(250, time + 0.1);
       osc.connect(filter);
-      playNode(filter, 0.6, 0.25);
+      playNode(filter, 0.7, 0.2);
       osc.start(time);
       osc.stop(time + 0.25);
-      return [osc];
+      nodes.push(osc);
+      break;
     }
-    case 'J-Bass': { // Growly, bright
+    case 'J-Bass': { // Growly, bright, with subtle overdrive
       const osc1 = ctx.createOscillator();
       osc1.type = 'sawtooth';
       osc1.frequency.setValueAtTime(freq, time);
-      osc1.detune.setValueAtTime(-4, time);
+      osc1.detune.setValueAtTime(-5, time);
 
       const osc2 = ctx.createOscillator();
       osc2.type = 'sawtooth';
       osc2.frequency.setValueAtTime(freq, time);
-      osc2.detune.setValueAtTime(4, time);
+      osc2.detune.setValueAtTime(5, time);
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1500, time);
+      filter.frequency.setValueAtTime(1800, time);
+      
+      const distortion = ctx.createWaveShaper();
+      distortion.curve = makeDistortionCurve(80);
       
       osc1.connect(filter);
       osc2.connect(filter);
-      playNode(filter, 0.3, 0.4);
+      filter.connect(distortion);
+      
+      playNode(distortion, 0.35, 0.4);
       osc1.start(time);
       osc1.stop(time + noteLength);
       osc2.start(time);
       osc2.stop(time + noteLength);
-      return [osc1, osc2];
+      nodes.push(osc1, osc2);
+      break;
     }
-    case 'Muted Pick': { // Percussive, short
+    case 'Muted Pick': { // Percussive, short, with pick attack
       noteLength = 0.15;
-      const noise = ctx.createBufferSource();
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * noteLength, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      noise.buffer = buffer;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(800, time);
-      filter.Q.value = 5;
-      noise.connect(filter);
-      playNode(filter, 0.5, noteLength);
-      noise.start(time);
-      noise.stop(time + noteLength);
-      return [noise];
+      // The "pick" sound
+      const pickNoise = createNoise(ctx, 'white', 0.03);
+      const pickFilter = ctx.createBiquadFilter();
+      pickFilter.type = 'highpass';
+      pickFilter.frequency.value = 3000;
+      const pickGain = ctx.createGain();
+      pickGain.gain.setValueAtTime(0.8, time);
+      pickGain.gain.exponentialRampToValueAtTime(MIN_EXP_TARGET, time + 0.03);
+      pickNoise.connect(pickFilter).connect(pickGain).connect(ctx.destination);
+      
+      // The "note" body
+      const bodyOsc = ctx.createOscillator();
+      bodyOsc.type = 'triangle';
+      bodyOsc.frequency.setValueAtTime(freq, time);
+      const bodyFilter = ctx.createBiquadFilter();
+      bodyFilter.type = 'lowpass';
+      bodyFilter.frequency.value = 400;
+      bodyOsc.connect(bodyFilter);
+      playNode(bodyFilter, 0.4, noteLength);
+      
+      pickNoise.start(time);
+      pickNoise.stop(time + 0.03);
+      bodyOsc.start(time);
+      bodyOsc.stop(time + noteLength);
+      nodes.push(pickNoise, bodyOsc);
+      break;
     }
-     case 'Sub Synth': { // Pure sine
+     case 'Sub Synth': { // Pure sine with a sub-octave
       const osc = ctx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, time);
-      playNode(osc, 0.8, 0.3);
+      playNode(osc, 0.7, 0.3);
+
+      const subOsc = ctx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(freq / 2, time); // One octave below
+      playNode(subOsc, 0.6, 0.3);
+
       osc.start(time);
       osc.stop(time + noteLength);
-      return [osc];
+      subOsc.start(time);
+      subOsc.stop(time + noteLength);
+      nodes.push(osc, subOsc);
+      break;
     }
-    case 'Classic': {
+    case 'Classic': { // Smoother, vintage tone
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, time);
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(400, time);
+      filter.frequency.setValueAtTime(350, time); // Lower cutoff for vintage sound
       osc.connect(filter);
-      playNode(filter, 0.7, noteLength);
+      
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.6, time + 0.02); // Slower attack
+      gain.gain.exponentialRampToValueAtTime(0.01, time + noteLength);
+      filter.connect(gain).connect(ctx.destination);
+
       osc.start(time);
       osc.stop(time + noteLength);
-      return [osc];
+      nodes.push(osc);
+      break;
     }
-    case 'Synth': {
+    case 'Synth': { // Dynamic filter wobble
       const osc = ctx.createOscillator();
       osc.type = 'square';
       osc.frequency.setValueAtTime(freq, time);
+      
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.Q.setValueAtTime(10, time);
-      filter.frequency.setValueAtTime(5000, time);
-      filter.frequency.exponentialRampToValueAtTime(200, time + noteLength * 0.75);
+      filter.Q.setValueAtTime(12, time);
+      filter.frequency.setValueAtTime(100, time);
+
+      // LFO to modulate the filter
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(6, time); // LFO speed
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(1500, time); // LFO depth
+      lfo.connect(lfoGain).connect(filter.frequency);
+      
       osc.connect(filter);
-      playNode(filter, 0.5, noteLength);
+      playNode(filter, 0.4, noteLength);
+      
       osc.start(time);
       osc.stop(time + noteLength);
-      return [osc];
+      lfo.start(time);
+      lfo.stop(time + noteLength);
+      nodes.push(osc, lfo);
+      break;
     }
-    case 'Electric':
+    case 'Electric': // Punchier with compression
     default: {
       const osc1 = ctx.createOscillator();
       osc1.type = 'sawtooth';
       osc1.frequency.setValueAtTime(freq, time);
-      osc1.detune.setValueAtTime(-5, time);
+      osc1.detune.setValueAtTime(-6, time);
+
       const osc2 = ctx.createOscillator();
       osc2.type = 'sawtooth';
       osc2.frequency.setValueAtTime(freq, time);
-      osc2.detune.setValueAtTime(5, time);
+      osc2.detune.setValueAtTime(6, time);
+
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(1200, time);
+
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-20, time);
+      compressor.knee.setValueAtTime(30, time);
+      compressor.ratio.setValueAtTime(12, time);
+      compressor.attack.setValueAtTime(0, time);
+      compressor.release.setValueAtTime(0.25, time);
+
       osc1.connect(filter);
       osc2.connect(filter);
-      playNode(filter, 0.4, noteLength);
+      
+      playNode(filter, 0.4, noteLength, compressor);
+
       osc1.start(time);
       osc1.stop(time + noteLength);
       osc2.start(time);
       osc2.stop(time + noteLength);
-      return [osc1, osc2];
+      nodes.push(osc1, osc2);
+      break;
     }
   }
+  return nodes;
 };
 
 // ===================================
@@ -182,40 +258,86 @@ const createNoise = (ctx: AudioContext, type: 'white' | 'pink' | 'brown', durati
     return node;
 };
 
+// Simple reverb using a generated impulse response
+const createReverb = (ctx: AudioContext, duration: number = 0.2, decay: number = 0.2): ConvolverNode => {
+    const sampleRate = ctx.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+    const impulseL = impulse.getChannelData(0);
+    const impulseR = impulse.getChannelData(1);
+
+    for (let i = 0; i < length; i++) {
+        const n = length - i;
+        impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+
+    const convolver = ctx.createConvolver();
+    convolver.buffer = impulse;
+    return convolver;
+};
+
+
 export const createKick = (ctx: AudioContext, time: number, sound: KickSound = 'Acoustic', volume: number = 1.0) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    
+    let finalNode: AudioNode = gain;
 
     let startFreq = 150, endFreq = 40, decay = 0.2, gainVol = 1.0;
 
     switch(sound) {
-      case '808':
-        startFreq = 120; endFreq = 30; decay = 0.8; gainVol = 1.2;
+      case '808': {
+        startFreq = 100; endFreq = 25; decay = 0.9; gainVol = 1.3;
+        const distortion = ctx.createWaveShaper();
+        distortion.curve = makeDistortionCurve(150);
+        gain.connect(distortion);
+        finalNode = distortion;
         break;
-      case 'Rock':
+      }
+      case 'Rock': {
         startFreq = 180; endFreq = 50; decay = 0.15; gainVol = 1.5;
-        // Add a click for the beater
+        const distortion = ctx.createWaveShaper();
+        distortion.curve = makeDistortionCurve(250);
+        const compressor = ctx.createDynamicsCompressor();
+        gain.connect(distortion).connect(compressor);
+        finalNode = compressor;
+        // fall-through to add click
+      }
+      // falls through
+      case 'Thump':
+      case 'Acoustic':
+      default: {
+        // Add a "beater" click to non-808 kicks
+        // FIX: This comparison was always true because the type of `sound` in this block is narrowed and cannot be '808',
+        // which caused a compiler error. The redundant `if` statement has been removed.
         const click = createNoise(ctx, 'white', 0.02);
         const clickGain = ctx.createGain();
-        clickGain.gain.setValueAtTime(0.5 * volume, time);
+        const clickFilter = ctx.createBiquadFilter();
+        clickFilter.type = 'highpass';
+        clickFilter.frequency.setValueAtTime(1000, time);
+        clickGain.gain.setValueAtTime(0.4 * volume, time);
         clickGain.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.001 * volume), time + 0.02);
-        click.connect(clickGain).connect(ctx.destination);
+        click.connect(clickFilter).connect(clickGain).connect(ctx.destination);
         click.start(time);
         click.stop(time + 0.02);
+        
+        // FIX: Added this condition to prevent overwriting parameters for the 'Rock' sound, which falls through.
+        if (sound !== 'Rock') {
+            startFreq = sound === 'Thump' ? 100 : 160;
+            endFreq = sound === 'Thump' ? 35 : 45;
+            decay = sound === 'Thump' ? 0.25 : 0.2;
+            gainVol = sound === 'Thump' ? 1.3 : 1.1;
+        }
         break;
-      case 'Thump':
-        startFreq = 100; endFreq = 35; decay = 0.25; gainVol = 1.3;
-        break;
-      case 'Acoustic':
-      default:
-        startFreq = 160; endFreq = 45; decay = 0.2; gainVol = 1.1;
-        break;
+      }
     }
 
+    osc.connect(gain);
+    finalNode.connect(ctx.destination);
+
     osc.frequency.setValueAtTime(startFreq, time);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, time + decay * 0.5);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, time + decay * 0.8);
     gain.gain.setValueAtTime(gainVol * volume, time);
     gain.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.01 * volume), time + decay);
     osc.start(time);
@@ -224,27 +346,38 @@ export const createKick = (ctx: AudioContext, time: number, sound: KickSound = '
   
 export const createSnare = (ctx: AudioContext, time: number, sound: SnareSound = 'Acoustic', volume: number = 1.0) => {
     // Noise component (the "snares")
-    const noise = createNoise(ctx, 'white', 0.2);
+    const noiseType = sound === 'Brush' ? 'pink' : 'white';
+    const noise = createNoise(ctx, noiseType, 0.2);
     const noiseFilter = ctx.createBiquadFilter();
     noiseFilter.type = 'highpass';
     const noiseEnvelope = ctx.createGain();
-    noise.connect(noiseFilter).connect(noiseEnvelope).connect(ctx.destination);
-
+    
     // Body component (the "drum")
     const osc = ctx.createOscillator();
     const oscEnvelope = ctx.createGain();
-    osc.connect(oscEnvelope).connect(ctx.destination);
+
+    // Reverb for depth
+    const reverb = createReverb(ctx, 0.15, 2);
+    const wetGain = ctx.createGain();
+    wetGain.gain.value = (sound === 'Acoustic' || sound === 'Tight') ? 0.2 : 0; // Only for acoustic snares
+
+    noise.connect(noiseFilter).connect(noiseEnvelope);
+    osc.connect(oscEnvelope);
+    
+    noiseEnvelope.connect(ctx.destination);
+    oscEnvelope.connect(ctx.destination);
+    
+    noiseEnvelope.connect(reverb).connect(wetGain).connect(ctx.destination);
+    oscEnvelope.connect(reverb).connect(wetGain).connect(ctx.destination);
 
     let hpf = 1000, noiseDecay = 0.15, oscFreq = 200, oscDecay = 0.1;
 
     switch(sound) {
       case '808':
-        hpf = 1200; noiseDecay = 0.1; oscFreq = 180; oscDecay = 0.2;
+        hpf = 1500; noiseDecay = 0.1; oscFreq = 180; oscDecay = 0.15;
         break;
       case 'Brush':
         hpf = 2000; noiseDecay = 0.25; oscFreq = 250; oscDecay = 0.08;
-        noiseEnvelope.gain.setValueAtTime(0.1 * volume, time);
-        noiseEnvelope.gain.linearRampToValueAtTime(0.7 * volume, time + 0.01);
         break;
       case 'Tight':
         hpf = 1500; noiseDecay = 0.08; oscFreq = 220; oscDecay = 0.07;
@@ -256,13 +389,14 @@ export const createSnare = (ctx: AudioContext, time: number, sound: SnareSound =
     }
     
     noiseFilter.frequency.value = hpf;
-    if(sound !== 'Brush') noiseEnvelope.gain.setValueAtTime(0.8 * volume, time);
+    noiseEnvelope.gain.setValueAtTime(0.8 * volume, time);
     noiseEnvelope.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.01 * volume), time + noiseDecay);
     noise.start(time);
     noise.stop(time + noiseDecay);
     
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(oscFreq, time);
+    osc.frequency.setValueAtTime(oscFreq * 1.5, time);
+    osc.frequency.exponentialRampToValueAtTime(oscFreq, time + oscDecay * 0.5);
     oscEnvelope.gain.setValueAtTime(0.9 * volume, time);
     oscEnvelope.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.01 * volume), time + oscDecay);
     osc.start(time);
@@ -271,28 +405,27 @@ export const createSnare = (ctx: AudioContext, time: number, sound: SnareSound =
 
 export const createHiHat = (ctx: AudioContext, time: number, sound: HiHatSound = 'Acoustic', volume: number = 1.0) => {
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
     
-    const fundamental = 40;
-    const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21]; // Frequencies for a metallic sound
+    const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21];
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = 'bandpass';
 
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.value = 7000; // Cut lows for crispness
+    
     let decay = 0.05, hpf = 7000, gainVol = 0.4;
     
     switch(sound) {
       case '808':
-        bandpass.Q.value = 0.5;
-        hpf = 5000; decay = 0.08; gainVol = 0.5;
+        decay = 0.15; gainVol = 0.5;
         break;
       case 'Bright':
-        bandpass.Q.value = 1;
-        hpf = 8000; decay = 0.04; gainVol = 0.3;
+        decay = 0.04; gainVol = 0.3; hpf = 9000;
         break;
       case 'Acoustic':
       default:
-        bandpass.Q.value = 0.8;
-        hpf = 7000; decay = 0.06; gainVol = 0.4;
+        decay = 0.05; gainVol = 0.4;
         break;
     }
 
@@ -301,6 +434,8 @@ export const createHiHat = (ctx: AudioContext, time: number, sound: HiHatSound =
     ratios.forEach(ratio => {
         const osc = ctx.createOscillator();
         osc.type = 'square';
+        // Detune slightly for a more complex, shimmering sound
+        const fundamental = sound === 'Acoustic' ? 40 + Math.random() * 2 : 40;
         osc.frequency.value = fundamental * ratio;
         osc.connect(bandpass);
         osc.start(time);
@@ -308,35 +443,39 @@ export const createHiHat = (ctx: AudioContext, time: number, sound: HiHatSound =
     });
 
     gain.gain.setValueAtTime(gainVol * volume, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + decay); // Don't multiply target by volume
-    bandpass.connect(gain);
+    gain.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.001 * volume), time + decay);
+    
+    bandpass.connect(highpass).connect(gain).connect(ctx.destination);
 };
 
 
 export const createClap = (ctx: AudioContext, time: number, sound: ClapSound = 'Acoustic', volume: number = 1.0) => {
-    const noise = createNoise(ctx, 'white', 0.2);
+    // Recreate a clap by firing 3 slightly delayed noise bursts
+    const mainGain = ctx.createGain();
+    mainGain.gain.value = volume;
+    mainGain.connect(ctx.destination);
+
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    const gain = ctx.createGain();
-
-    let filterFreq = 1000, decay = 0.15;
-    if (sound === '808') {
-        filterFreq = 1200;
-        decay = 0.1;
-    }
-
-    filter.frequency.value = filterFreq;
+    filter.frequency.value = sound === '808' ? 1200 : 1000;
     filter.Q.value = 50;
+    filter.connect(mainGain);
 
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(1 * volume, time + 0.005);
-    gain.gain.linearRampToValueAtTime(0.8 * volume, time + 0.01);
-    gain.gain.linearRampToValueAtTime(1 * volume, time + 0.015);
-    gain.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.01 * volume), time + decay);
-
-    noise.connect(filter).connect(gain).connect(ctx.destination);
-    noise.start(time);
-    noise.stop(time + decay);
+    const decay = sound === '808' ? 0.1 : 0.15;
+    
+    const createBurst = (startTime: number, gainValue: number) => {
+        const noise = createNoise(ctx, 'white', decay);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(gainValue, startTime);
+        gain.gain.exponentialRampToValueAtTime(MIN_EXP_TARGET, startTime + decay);
+        noise.connect(gain).connect(filter);
+        noise.start(startTime);
+        noise.stop(startTime + decay);
+    };
+    
+    createBurst(time, 1.0);
+    createBurst(time + 0.008, 0.8);
+    createBurst(time + 0.016, 0.9);
 }
 
 export const createTom = (ctx: AudioContext, time: number, sound: TomSound = 'Acoustic Mid', volume: number = 1.0) => {
@@ -344,6 +483,7 @@ export const createTom = (ctx: AudioContext, time: number, sound: TomSound = 'Ac
     const gain = ctx.createGain();
     
     let startFreq = 200, endFreq = 100, decay = 0.2;
+    let oscType: OscillatorType = 'triangle';
 
     switch(sound) {
       case 'Acoustic Low':
@@ -354,6 +494,7 @@ export const createTom = (ctx: AudioContext, time: number, sound: TomSound = 'Ac
         break;
       case 'Electro':
         startFreq = 250; endFreq = 50; decay = 0.4;
+        oscType = 'sine'; // Classic electro tom sound
         break;
       case 'Acoustic Mid':
       default:
@@ -361,9 +502,9 @@ export const createTom = (ctx: AudioContext, time: number, sound: TomSound = 'Ac
         break;
     }
 
-    osc.type = 'sine';
+    osc.type = oscType;
     osc.frequency.setValueAtTime(startFreq, time);
-    osc.frequency.exponentialRampToValueAtTime(endFreq, time + decay);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, time + decay * 0.8); // More pronounced pitch drop
 
     gain.gain.setValueAtTime(1 * volume, time);
     gain.gain.exponentialRampToValueAtTime(Math.max(MIN_EXP_TARGET, 0.01 * volume), time + decay);
