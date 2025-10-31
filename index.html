@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,11 +10,88 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Teko:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-primary: #F9FAFB;
+        --bg-secondary: #FFFFFF;
+        --bg-tertiary: #F3F4F6;
+        --text-primary: #1F2937;
+        --text-secondary: #6B7281;
+        --text-accent: #6D28D9;
+        --border-primary: #E5E7EB;
+        --border-secondary: #D1D5DB;
+        --accent-primary: #8B5CF6;
+        --accent-primary-hover: #7C3AED;
+        --accent-gradient-start: #A78BFA;
+        --accent-gradient-end: #6D28D9;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --color-beginner: #22C55E;
+        --color-intermediate: #F59E0B;
+        --color-advanced: #EF4444;
+        --slider-track: #E5E7EB;
+        --slider-thumb: #8B5CF6;
+      }
+
+      html.dark {
+        --bg-primary: #111827;
+        --bg-secondary: #1F2937;
+        --bg-tertiary: #374151;
+        --text-primary: #F9FAFB;
+        --text-secondary: #9CA3AF;
+        --text-accent: #A78BFA;
+        --border-primary: #374151;
+        --border-secondary: #4B5563;
+        --accent-primary: #8B5CF6;
+        --accent-primary-hover: #A78BFA;
+        --accent-gradient-start: #8B5CF6;
+        --accent-gradient-end: #6D28D9;
+        --shadow-color: rgba(0, 0, 0, 0.25);
+        --color-beginner: #4ADE80;
+        --color-intermediate: #FBBF24;
+        --color-advanced: #F87171;
+        --slider-track: #4B5563;
+        --slider-thumb: #A78BFA;
+      }
+
       body {
         font-family: 'Teko', sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
       .font-roboto-mono {
         font-family: 'Roboto Mono', monospace;
+      }
+      
+      /* Custom styles for range input */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: var(--slider-track);
+        border-radius: 5px;
+        outline: none;
+        transition: background 0.3s ease;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: var(--slider-thumb);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--bg-secondary);
+        transition: background 0.3s ease;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: var(--slider-thumb);
+        cursor: pointer;
+        border-radius: 50%;
+        border: 2px solid var(--bg-secondary);
+         transition: background 0.3s ease;
       }
     </style>
   <script type="importmap">
@@ -31,6 +107,16 @@
 </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Prevent FOUC (Flash of Unstyled Content) for theme
+      (function() {
+        const theme = localStorage.getItem('bass-companion-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (!theme && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

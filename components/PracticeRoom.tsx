@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Lick, BassSound } from '../types';
 import TabDisplay from './TabDisplay';
 import DrumMachine from './DrumMachine';
 import { BackIcon, PlayIcon, PauseIcon } from './icons';
 import { DRUM_PATTERNS } from '../constants';
-import { createBassNote } from '../audio/audioUtils';
+import { createBassNote, createKick, createSnare, createHiHat } from '../audio/audioUtils';
 import { generateTablature } from '../utils/licks';
 
 interface PracticeRoomProps {
@@ -38,57 +39,10 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
   const timeSignatureBeats = lick.timeSignature === '4/4' ? 4 : lick.timeSignature === '3/4' ? 3 : 7;
   const tablature = generateTablature(lick.sequence, lick.timeSignature);
 
-  const difficultyColor: { [key in Lick['difficulty']]: string } = {
-    Beginner: 'bg-green-500 text-green-900',
-    Intermediate: 'bg-yellow-500 text-yellow-900',
-    Advanced: 'bg-red-500 text-red-900',
-  };
-  
-  const createKick = (ctx: AudioContext, time: number) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.setValueAtTime(150, time);
-    osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.1);
-    gain.gain.setValueAtTime(1, time);
-    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-    osc.start(time);
-    osc.stop(time + 0.1);
-  };
-  
-  const createSnare = (ctx: AudioContext, time: number) => {
-    const noise = ctx.createBufferSource();
-    const bufferSize = ctx.sampleRate;
-    const buffer = ctx.createBuffer(1, bufferSize, bufferSize);
-    const output = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
-    noise.buffer = buffer;
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'highpass';
-    noiseFilter.frequency.value = 1000;
-    noise.connect(noiseFilter);
-    const noiseEnvelope = ctx.createGain();
-    noiseFilter.connect(noiseEnvelope);
-    noiseEnvelope.connect(ctx.destination);
-    noiseEnvelope.gain.setValueAtTime(1, time);
-    noiseEnvelope.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
-    noise.start(time);
-    noise.stop(time + 0.2);
-  };
-
-  const createHiHat = (ctx: AudioContext, time: number) => {
-    const osc = ctx.createOscillator();
-    osc.type = 'square';
-    const bandpass = ctx.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.value = 10000;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.3, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-    osc.connect(bandpass).connect(gain).connect(ctx.destination);
-    osc.start(time);
-    osc.stop(time + 0.05);
+  const difficultyClasses: { [key in Lick['difficulty']]: string } = {
+    Beginner: 'bg-[var(--color-beginner)]/20 text-[var(--color-beginner)]',
+    Intermediate: 'bg-[var(--color-intermediate)]/20 text-[var(--color-intermediate)]',
+    Advanced: 'bg-[var(--color-advanced)]/20 text-[var(--color-advanced)]',
   };
 
   const scheduler = useCallback(() => {
@@ -194,32 +148,32 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
   return (
     <div className="space-y-8">
       <div>
-        <button onClick={onBack} className="flex items-center text-purple-400 hover:text-purple-300 mb-4 group">
+        <button onClick={onBack} className="flex items-center text-[var(--text-accent)] hover:text-[var(--accent-primary-hover)] mb-4 group">
           <BackIcon />
           <span className="ml-2 group-hover:underline">Back to Exercises</span>
         </button>
-        <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="bg-[var(--bg-secondary)] rounded-lg shadow-lg p-6 border border-[var(--border-primary)]">
           <div className="flex items-center gap-4 mb-1 flex-wrap">
-            <h2 className="text-4xl font-bold text-purple-400">{lick.name}</h2>
-            <span className={`px-3 py-1 text-sm font-bold rounded-full ${difficultyColor[lick.difficulty]}`}>
+            <h2 className="text-4xl font-bold text-[var(--text-accent)]">{lick.name}</h2>
+            <span className={`px-3 py-1 text-sm font-bold rounded-full ${difficultyClasses[lick.difficulty]}`}>
               {lick.difficulty}
             </span>
           </div>
-          <p className="text-xl text-gray-400 mb-4">Style: {lick.artist}</p>
-          <p className="text-gray-300 mb-6">{lick.description}</p>
+          <p className="text-xl text-[var(--text-secondary)] mb-4">Style: {lick.artist}</p>
+          <p className="text-[var(--text-primary)] mb-6">{lick.description}</p>
           <TabDisplay tablature={tablature} />
         </div>
       </div>
       
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-        <h3 className="text-3xl font-bold text-purple-300 mb-4">Practice Controls</h3>
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow-lg p-6 border border-[var(--border-primary)]">
+        <h3 className="text-3xl font-bold text-[var(--text-accent)] mb-4">Practice Controls</h3>
         
         <div className="flex justify-center gap-4 mb-6">
             {Array.from({ length: timeSignatureBeats }).map((_, i) => (
                 <div
                     key={i}
-                    className={`h-4 w-4 rounded-full transition-all duration-100 ease-in-out ${
-                        visualBeat === i ? 'bg-purple-400 scale-125' : 'bg-gray-600'
+                    className={`h-4 w-4 rounded-full transition-all duration-150 ease-in-out ${
+                        visualBeat === i ? 'bg-[var(--accent-primary)] scale-125' : 'bg-[var(--bg-tertiary)]'
                     }`}
                 />
             ))}
@@ -230,7 +184,7 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
                 <button
                     onClick={togglePlay}
                     aria-label={isPlaying ? 'Pause' : 'Play'}
-                    className="bg-purple-600 hover:bg-purple-500 text-white p-4 rounded-full transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 w-32"
+                    className="bg-gradient-to-r from-[var(--accent-gradient-start)] to-[var(--accent-gradient-end)] text-white p-4 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-36"
                 >
                     {isPlaying ? <PauseIcon /> : <PlayIcon />}
                     <span className="font-bold text-lg">{isPlaying ? 'Pause' : 'Play'}</span>
@@ -238,8 +192,8 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
             </div>
             
             <div className="flex flex-col items-center">
-                <div className="text-6xl font-bold text-gray-100 font-roboto-mono">{tempo}</div>
-                <div className="text-sm text-gray-400 -mt-2">BPM</div>
+                <div className="text-6xl font-bold text-[var(--text-primary)] font-roboto-mono">{tempo}</div>
+                <div className="text-sm text-[var(--text-secondary)] -mt-2">BPM</div>
                  <input
                     id="tempo"
                     type="range"
@@ -247,17 +201,17 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
                     max="200"
                     value={tempo}
                     onChange={(e) => setTempo(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-2"
+                    className="w-full mt-2"
                 />
             </div>
             
             <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-2">
-                 <label htmlFor="bassSound" className="text-lg font-semibold text-purple-300">Bass Sound</label>
+                 <label htmlFor="bassSound" className="text-lg font-semibold text-[var(--text-accent)]">Bass Sound</label>
                  <select
                     id="bassSound"
                     value={bassSound}
                     onChange={(e) => onBassSoundChange(e.target.value as BassSound)}
-                    className="w-full sm:w-auto bg-gray-700 text-white py-2 px-3 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full sm:w-auto bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-2 px-3 rounded-md border border-[var(--border-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
                   >
                     <option value="J-Bass">J-Bass</option>
                     <option value="P-Bass">P-Bass</option>
@@ -269,7 +223,7 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
                   </select>
             </div>
         </div>
-        <div className="border-t border-gray-700 pt-6">
+        <div className="border-t border-[var(--border-primary)] pt-6">
           <DrumMachine 
             patternName={drumPatternName}
             onPatternChange={setDrumPatternName}

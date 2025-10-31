@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface TabDisplayProps {
@@ -7,8 +6,8 @@ interface TabDisplayProps {
 
 const TabDisplay: React.FC<TabDisplayProps> = ({ tablature }) => {
   return (
-    <div className="bg-gray-900 p-4 rounded-lg overflow-x-auto">
-      <pre className="text-gray-300 font-roboto-mono text-sm md:text-base whitespace-pre">
+    <div className="bg-[var(--bg-primary)] p-4 rounded-lg overflow-x-auto border border-[var(--border-primary)]">
+      <pre className="text-[var(--text-secondary)] font-roboto-mono text-sm md:text-base whitespace-pre">
         <code>{tablature}</code>
       </pre>
     </div>

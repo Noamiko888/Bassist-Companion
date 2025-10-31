@@ -13,11 +13,11 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ patternName, onPatternChange,
   return (
     <div>
       <div className="flex items-center justify-between">
-         <h4 className="text-xl font-semibold text-purple-300">Drum Machine</h4>
+         <h4 className="text-xl font-semibold text-[var(--text-accent)]">Drum Machine</h4>
          <button 
             onClick={onMuteToggle}
             aria-label={isMuted ? "Unmute Drums" : "Mute Drums"}
-            className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-md transition-colors"
+            className="flex items-center gap-2 bg-[var(--bg-tertiary)] hover:bg-[var(--border-primary)] text-[var(--text-primary)] py-2 px-3 rounded-md transition-colors"
          >
             {isMuted ? <SpeakerOffIcon /> : <SpeakerOnIcon />}
             <span>{isMuted ? "Muted" : "On"}</span>
@@ -29,7 +29,7 @@ const DrumMachine: React.FC<DrumMachineProps> = ({ patternName, onPatternChange,
             id="pattern"
             value={patternName}
             onChange={(e) => onPatternChange(e.target.value)}
-            className="w-full bg-gray-700 text-white py-2 px-3 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="w-full bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-2 px-3 rounded-md border border-[var(--border-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
           >
             {DRUM_PATTERNS.map((pattern) => (
               <option key={pattern.name} value={pattern.name}>

@@ -1,3 +1,4 @@
+
 import { BassSound } from '../types';
 
 export const midiToFreq = (midi: number): number => {
@@ -140,4 +141,52 @@ export const createBassNote = (
       return [osc1, osc2];
     }
   }
+};
+
+// Drum Synthesis
+export const createKick = (ctx: AudioContext, time: number) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.1);
+    gain.gain.setValueAtTime(1, time);
+    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+    osc.start(time);
+    osc.stop(time + 0.1);
+};
+  
+export const createSnare = (ctx: AudioContext, time: number) => {
+    const noise = ctx.createBufferSource();
+    const bufferSize = ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, bufferSize, bufferSize);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+    noise.buffer = buffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 1000;
+    noise.connect(noiseFilter);
+    const noiseEnvelope = ctx.createGain();
+    noiseFilter.connect(noiseEnvelope);
+    noiseEnvelope.connect(ctx.destination);
+    noiseEnvelope.gain.setValueAtTime(1, time);
+    noiseEnvelope.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+    noise.start(time);
+    noise.stop(time + 0.2);
+};
+
+export const createHiHat = (ctx: AudioContext, time: number) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 10000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.3, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    osc.connect(bandpass).connect(gain).connect(ctx.destination);
+    osc.start(time);
+    osc.stop(time + 0.05);
 };

@@ -105,19 +105,19 @@ const LickList: React.FC<LickListProps> = ({
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center">
-            <button onClick={onBack} className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full mr-4 transition-colors">
+            <button onClick={onBack} className="bg-[var(--bg-tertiary)] hover:bg-[var(--border-primary)] p-2 rounded-full mr-4 transition-colors">
             <BackIcon />
             </button>
-            <h2 className="text-4xl font-bold text-purple-300">{difficulty} Exercises</h2>
+            <h2 className="text-4xl font-bold text-[var(--text-accent)]">{difficulty} Exercises</h2>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
             <div className='flex items-center gap-2'>
-              <label htmlFor="practiceKey" className="text-gray-300 font-semibold">Practice Key:</label>
+              <label htmlFor="practiceKey" className="text-[var(--text-secondary)] font-semibold">Practice Key:</label>
               <select
                 id="practiceKey"
                 value={selectedKey}
                 onChange={(e) => onKeyChange(e.target.value)}
-                className="bg-gray-700 text-white py-2 px-3 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-2 px-3 rounded-md border border-[var(--border-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               >
                 {KEYS.map(key => <option key={key} value={key}>{key}</option>)}
               </select>
@@ -126,7 +126,7 @@ const LickList: React.FC<LickListProps> = ({
               id="previewBassSound"
               value={bassSound}
               onChange={handleSoundChange}
-              className="bg-gray-700 text-white py-2 px-3 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-[var(--bg-tertiary)] text-[var(--text-primary)] py-2 px-3 rounded-md border border-[var(--border-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             >
               <option value="J-Bass">J-Bass</option>
               <option value="P-Bass">P-Bass</option>
@@ -139,7 +139,7 @@ const LickList: React.FC<LickListProps> = ({
             <button
                 onClick={onGenerateLick}
                 disabled={isGenerating}
-                className="flex items-center justify-center bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg"
+                className="flex items-center justify-center bg-gradient-to-r from-[var(--accent-gradient-start)] to-[var(--accent-gradient-end)] hover:from-[var(--accent-gradient-start)]/90 hover:to-[var(--accent-gradient-end)]/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg transition-all shadow-md hover:shadow-lg"
             >
                 {isGenerating ? <><LoadingIcon /><span>Generating...</span></> : "✨ Generate New Lick"}
             </button>
@@ -150,7 +150,7 @@ const LickList: React.FC<LickListProps> = ({
         {categoryOrder.map(category => (
           groupedLicks[category] && groupedLicks[category].length > 0 && (
             <div key={category}>
-              <h3 className="text-2xl font-semibold text-purple-400 border-b-2 border-purple-500/30 pb-2 mb-4">{category}</h3>
+              <h3 className="text-2xl font-semibold text-[var(--text-accent)] border-b-2 border-[var(--accent-primary)]/30 pb-2 mb-4">{category}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupedLicks[category].map((lick) => {
                   const displayLick = lick.transposable ? transposeLick(lick, selectedKey) : lick;
@@ -158,16 +158,16 @@ const LickList: React.FC<LickListProps> = ({
                     <button
                       key={lick.name}
                       onClick={() => onSelectLick(lick)} // Pass original lick up
-                      className="w-full text-left p-4 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all duration-200 shadow-md hover:shadow-lg flex justify-between items-center"
+                      className="w-full text-left p-4 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-primary)] transition-all duration-200 shadow-md hover:shadow-lg hover:border-[var(--accent-primary)]/50 flex justify-between items-center"
                     >
                       <div>
-                        <p className="font-bold text-xl text-gray-100">{displayLick.name}</p>
-                        <p className="text-sm text-gray-400">{displayLick.artist}</p>
+                        <p className="font-bold text-xl text-[var(--text-primary)]">{displayLick.name}</p>
+                        <p className="text-sm text-[var(--text-secondary)]">{displayLick.artist}</p>
                       </div>
                       <button 
                         onClick={(e) => handlePreviewToggle(e, displayLick)} // Preview transposed lick
                         aria-label={playingLickName === displayLick.name ? "Stop preview" : "Play preview"}
-                        className="p-2 rounded-full bg-gray-700 hover:bg-purple-600 transition-colors flex-shrink-0"
+                        className="p-2 rounded-full bg-[var(--bg-tertiary)] hover:bg-[var(--accent-primary)] hover:text-white transition-colors flex-shrink-0"
                       >
                         {playingLickName === displayLick.name ? <StopIcon className="h-5 w-5"/> : <PlayIcon className="h-5 w-5"/>}
                       </button>

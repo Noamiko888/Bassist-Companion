@@ -1,5 +1,7 @@
 {
   "name": "Bassist Companion",
   "description": "An app for bassists to practice famous licks with tablature and a built-in drum machine. Leverage Gemini to generate new and inspiring bass lines to expand your creativity.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

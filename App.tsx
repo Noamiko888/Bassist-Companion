@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Lick, Difficulty, BassSound } from './types';
 import { PREDEFINED_LICKS } from './constants';
 import Header from './components/Header';
@@ -9,6 +9,7 @@ import { generateLick } from './services/geminiService';
 import { transposeLick } from './utils/licks';
 
 type View = 'level' | 'list' | 'practice';
+type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('level');
@@ -18,6 +19,24 @@ const App: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [bassSound, setBassSound] = useState<BassSound>('J-Bass');
   const [selectedKey, setSelectedKey] = useState<string>('C');
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem('bass-companion-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return (savedTheme === 'dark' || (!savedTheme && prefersDark)) ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('bass-companion-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
 
   const handleSelectDifficulty = (difficulty: Difficulty) => {
     setSelectedDifficulty(difficulty);
@@ -93,8 +112,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-900 text-gray-100 min-h-screen">
-      <Header />
+    <div className="bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen">
+      <Header theme={theme} toggleTheme={toggleTheme} />
       <main className="container mx-auto p-4 md:p-8">
         {renderContent()}
       </main>
