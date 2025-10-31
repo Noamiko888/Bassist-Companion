@@ -1,4 +1,4 @@
-import { Lick, DrumPattern } from './types';
+import { Lick, DrumPattern, KickSound, SnareSound, HiHatSound, ClapSound, TomSound } from './types';
 
 // String numbers: 0=G, 1=D, 2=A, 3=E
 export const PREDEFINED_LICKS: Lick[] = [
@@ -176,54 +176,60 @@ export const PREDEFINED_LICKS: Lick[] = [
 ];
 
 export const DRUM_PATTERNS: DrumPattern[] = [
+  // Sequence order: [kick, snare, hi-hat, clap, tom]
   {
     name: "Rock Beat",
-    // [kick, snare, hi-hat] - 8 steps (8th notes) for a 4/4 measure
     sequence: [
-      [1, 0, 1], [0, 0, 1], [0, 1, 1], [0, 0, 1],
-      [1, 0, 1], [0, 0, 1], [0, 1, 1], [0, 0, 1],
+      [1, 0, 1, 0, 0], [0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0],
+      [1, 0, 1, 0, 0], [0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [0, 0, 1, 0, 1],
     ]
   },
   {
     name: "Funk Groove",
     sequence: [
-      [1, 0, 1], [0, 0, 1], [0, 1, 0], [1, 0, 1],
-      [0, 0, 1], [0, 1, 1], [1, 0, 0], [0, 0, 1],
+      [1, 0, 1, 0, 0], [0, 0, 1, 0, 0], [0, 1, 0, 1, 0], [1, 0, 1, 0, 0],
+      [0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [1, 0, 0, 0, 0], [0, 0, 1, 0, 1],
     ]
   },
   {
     name: "Swing Beat",
     sequence: [
-      [1, 0, 1], [0, 0, 0], [0, 0, 1], [0, 1, 1],
-      [0, 0, 0], [0, 0, 1], [1, 0, 1], [0, 0, 0],
+      [1, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 1, 1, 1, 0],
+      [0, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 1, 0, 0], [0, 0, 0, 0, 0],
     ]
   },
   {
     name: "Shuffle",
     sequence: [
-      [1, 0, 1], [0, 0, 0], [0, 1, 1], [0, 0, 1],
-      [1, 0, 1], [0, 0, 0], [0, 1, 1], [0, 0, 1],
+      [1, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0],
+      [1, 0, 1, 0, 0], [0, 0, 0, 0, 1], [0, 1, 1, 1, 0], [0, 0, 1, 0, 0],
     ]
   },
   {
     name: "Disco",
     sequence: [
-      [1, 0, 0], [0, 0, 1], [0, 1, 0], [0, 0, 1],
-      [1, 0, 0], [0, 0, 1], [0, 1, 0], [0, 0, 1],
+      [1, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0],
+      [1, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 1, 0, 1, 0], [0, 0, 1, 0, 0],
     ]
   },
   {
     name: "Hip-Hop",
     sequence: [
-      [1, 0, 1], [0, 0, 1], [0, 1, 1], [0, 0, 0],
-      [1, 0, 1], [1, 0, 1], [0, 1, 1], [0, 0, 0],
+      [1, 0, 1, 0, 0], [0, 0, 1, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 0],
+      [1, 0, 1, 0, 0], [1, 0, 1, 0, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 1],
     ]
   },
   {
     name: "Metronome",
     sequence: [
-      [0, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
-      [0, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+      [0, 1, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0],
     ]
   }
 ];
+
+export const KICK_SOUNDS: KickSound[] = ['Acoustic', '808', 'Rock', 'Thump'];
+export const SNARE_SOUNDS: SnareSound[] = ['Acoustic', '808', 'Brush', 'Tight'];
+export const HIHAT_SOUNDS: HiHatSound[] = ['Acoustic', '808', 'Bright'];
+export const CLAP_SOUNDS: ClapSound[] = ['Acoustic', '808'];
+export const TOM_SOUNDS: TomSound[] = ['Acoustic Low', 'Acoustic Mid', 'Acoustic High', 'Electro'];

@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Lick, BassSound } from '../types';
+import { Lick, BassSound, KickSound, SnareSound, HiHatSound, ClapSound, TomSound } from '../types';
 import TabDisplay from './TabDisplay';
 import DrumMachine from './DrumMachine';
 import { BackIcon, PlayIcon, PauseIcon } from './icons';
 import { DRUM_PATTERNS } from '../constants';
-import { createBassNote, createKick, createSnare, createHiHat } from '../audio/audioUtils';
+import { createBassNote, createKick, createSnare, createHiHat, createClap, createTom } from '../audio/audioUtils';
 import { generateTablature } from '../utils/licks';
 
 interface PracticeRoomProps {
@@ -29,6 +28,13 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
   const [drumPatternName, setDrumPatternName] = useState<string>(DRUM_PATTERNS[0].name);
   const [isDrumsMuted, setIsDrumsMuted] = useState(false);
   const [visualBeat, setVisualBeat] = useState<number | null>(null);
+
+  // Individual drum sound states
+  const [kickSound, setKickSound] = useState<KickSound>('Acoustic');
+  const [snareSound, setSnareSound] = useState<SnareSound>('Acoustic');
+  const [hiHatSound, setHiHatSound] = useState<HiHatSound>('Acoustic');
+  const [clapSound, setClapSound] = useState<ClapSound>('Acoustic');
+  const [tomSound, setTomSound] = useState<TomSound>('Acoustic Mid');
   
   const schedulerTimer = useRef<number | null>(null);
   const current16thStep = useRef(0);
@@ -67,18 +73,21 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
       }
 
       // --- Schedule Drums (always 8th notes) ---
+      // Sequence order: [kick, snare, hi-hat, clap, tom]
       if (!isDrumsMuted && stepOfBar % 2 === 0) {
         const drumStepIndex = (stepOfBar / 2) % currentPattern.sequence.length;
         const patternStep = currentPattern.sequence[drumStepIndex];
-        if (patternStep[0]) createKick(ctx, nextNoteTime.current);
-        if (patternStep[1]) createSnare(ctx, nextNoteTime.current);
-        if (patternStep[2]) createHiHat(ctx, nextNoteTime.current);
+        if (patternStep[0]) createKick(ctx, nextNoteTime.current, kickSound);
+        if (patternStep[1]) createSnare(ctx, nextNoteTime.current, snareSound);
+        if (patternStep[2]) createHiHat(ctx, nextNoteTime.current, hiHatSound);
+        if (patternStep[3]) createClap(ctx, nextNoteTime.current, clapSound);
+        if (patternStep[4]) createTom(ctx, nextNoteTime.current, tomSound);
       }
       
       nextNoteTime.current += secondsPer16thNote;
       current16thStep.current++;
     }
-  }, [tempo, lick.sequence, bassSound, drumPatternName, isDrumsMuted, timeSignatureBeats]);
+  }, [tempo, lick.sequence, bassSound, drumPatternName, isDrumsMuted, timeSignatureBeats, kickSound, snareSound, hiHatSound, clapSound, tomSound]);
   
   const start = useCallback(() => {
     const ctx = getAudioContext();
@@ -143,7 +152,7 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
         stop();
         start();
     }
-  }, [tempo, bassSound, drumPatternName, isDrumsMuted, lick, start, stop]);
+  }, [tempo, bassSound, drumPatternName, isDrumsMuted, lick, start, stop, kickSound, snareSound, hiHatSound, clapSound, tomSound]);
 
   return (
     <div className="space-y-8">
@@ -229,6 +238,11 @@ const PracticeRoom: React.FC<PracticeRoomProps> = ({ lick, onBack, bassSound, on
             onPatternChange={setDrumPatternName}
             isMuted={isDrumsMuted}
             onMuteToggle={() => setIsDrumsMuted(prev => !prev)}
+            kickSound={kickSound} onKickSoundChange={setKickSound}
+            snareSound={snareSound} onSnareSoundChange={setSnareSound}
+            hiHatSound={hiHatSound} onHiHatSoundChange={setHiHatSound}
+            clapSound={clapSound} onClapSoundChange={setClapSound}
+            tomSound={tomSound} onTomSoundChange={setTomSound}
           />
         </div>
       </div>

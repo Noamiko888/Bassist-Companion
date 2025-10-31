@@ -1,23 +1,33 @@
 export type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
+
+export type BassSound = 'J-Bass' | 'P-Bass' | 'Muted Pick' | 'Sub Synth' | 'Classic' | 'Electric' | 'Synth';
+
+// Individual drum sound types for mix-and-match kits
+export type KickSound = 'Acoustic' | '808' | 'Rock' | 'Thump';
+export type SnareSound = 'Acoustic' | '808' | 'Brush' | 'Tight';
+export type HiHatSound = 'Acoustic' | '808' | 'Bright';
+export type ClapSound = 'Acoustic' | '808';
+export type TomSound = 'Acoustic Low' | 'Acoustic Mid' | 'Acoustic High' | 'Electro';
+
+
 export type TimeSignature = '4/4' | '3/4' | '7/4';
-export type BassSound = 'Classic' | 'Electric' | 'Synth' | 'P-Bass' | 'J-Bass' | 'Muted Pick' | 'Sub Synth';
 
 export interface Note {
   midi: number;
-  string: number; // 0=G, 1=D, 2=A, 3=E
+  string: number;
   fret: number;
 }
 
 export interface Lick {
   name: string;
-  artist: string; // Using this field for 'Author' or 'Style' now
+  artist: string;
   category: 'Warm-up' | 'Scale' | 'Arpeggio' | 'Walking Bass' | 'Funk';
   description: string;
   difficulty: Difficulty;
   timeSignature: TimeSignature;
-  sequence: (Note | null)[]; // Array of structured notes, null is a rest.
-  originalKey: string; // e.g., 'C', 'G', 'Am'
+  originalKey: string;
   transposable: boolean;
+  sequence: (Note | null)[];
 }
 
 export interface DrumPattern {
