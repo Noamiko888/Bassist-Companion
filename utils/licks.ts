@@ -20,6 +20,20 @@ const getRootMidi = (key: string): number | null => {
     return KEY_MIDI_MAP[key] ?? null;
 }
 
+// Standard EADG tuning
+const OPEN_STRING_MIDIS = [43, 38, 33, 28]; // G, D, A, E
+
+const findNoteOnFretboard = (midi: number): { string: number, fret: number } | null => {
+    // Prefers higher strings (lower frets) by checking from G string down to E.
+    for (let s = 0; s < OPEN_STRING_MIDIS.length; s++) {
+        const fret = midi - OPEN_STRING_MIDIS[s];
+        if (fret >= 0 && fret <= 24) { // Assuming 24 frets max
+            return { string: s, fret: fret };
+        }
+    }
+    return null; // Note is out of range for a standard 4-string bass
+};
+
 export const transposeLick = (lick: Lick, targetKey: string): Lick => {
     if (!lick.transposable) return lick;
 
@@ -34,20 +48,25 @@ export const transposeLick = (lick: Lick, targetKey: string): Lick => {
     const semitoneShift = targetRootMidi - originalRootMidi;
     if (semitoneShift === 0) return lick;
 
-    const newSequence = lick.sequence.map(note => {
-        if (!note) return null;
-        const newMidi = note.midi + semitoneShift;
-        const newFret = note.fret + semitoneShift;
-        // Basic check to prevent unplayable frets (e.g., negative)
-        if (newFret < 0 || newFret > 24) {
-            // A more advanced implementation could shift notes to other strings.
-            // For now, we'll just return the original lick if transposition is unplayable.
-            // This is a simplistic safeguard.
-            console.warn(`Transposition for note ${note.midi} to key ${targetKey} results in unplayable fret ${newFret}.`);
-            return note; // returning original note in this case
+    const newSequence: (Note | null)[] = [];
+
+    for (const note of lick.sequence) {
+        if (!note) {
+            newSequence.push(null);
+            continue;
         }
-        return { ...note, midi: newMidi, fret: newFret };
-    });
+
+        const newMidi = note.midi + semitoneShift;
+        const newPosition = findNoteOnFretboard(newMidi);
+
+        if (!newPosition) {
+            // A note is out of playable range, so the whole transposition is invalid.
+            // Return the original lick to avoid a partially transposed, incorrect result.
+            console.warn(`Failed to transpose lick "${lick.name}" to key "${targetKey}". Note with MIDI ${newMidi} is out of range.`);
+            return lick;
+        }
+        newSequence.push({ midi: newMidi, string: newPosition.string, fret: newPosition.fret });
+    }
 
     const newName = lick.name.replace(/\([A-Ga-g#bm]+\)/, `(${targetKey})`);
 

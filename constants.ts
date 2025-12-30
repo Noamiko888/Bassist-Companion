@@ -40,7 +40,7 @@ export const PREDEFINED_LICKS: Lick[] = [
     difficulty: 'Beginner',
     timeSignature: '4/4',
     originalKey: 'G',
-    transposable: false,
+    transposable: true,
     sequence: [
       { midi: 31, string: 3, fret: 3 }, { midi: 31, string: 3, fret: 3 },
       { midi: 35, string: 2, fret: 2 }, { midi: 35, string: 2, fret: 2 },
@@ -71,7 +71,7 @@ export const PREDEFINED_LICKS: Lick[] = [
     difficulty: 'Intermediate',
     timeSignature: '4/4',
     originalKey: 'C',
-    transposable: false,
+    transposable: true,
     sequence: [
       // Dm7
       { midi: 38, string: 2, fret: 5 }, { midi: 41, string: 1, fret: 3 }, { midi: 42, string: 1, fret: 4 }, { midi: 43, string: 1, fret: 5 },
@@ -118,7 +118,7 @@ export const PREDEFINED_LICKS: Lick[] = [
     difficulty: 'Intermediate',
     timeSignature: '4/4',
     originalKey: 'A',
-    transposable: false,
+    transposable: true,
     sequence: [
       { midi: 33, string: 2, fret: 0 }, { midi: 33, string: 2, fret: 0 }, { midi: 35, string: 2, fret: 2 }, { midi: 35, string: 2, fret: 2 },
       { midi: 36, string: 2, fret: 3 }, { midi: 36, string: 2, fret: 3 }, { midi: 37, string: 2, fret: 4 }, { midi: 37, string: 2, fret: 4 },
